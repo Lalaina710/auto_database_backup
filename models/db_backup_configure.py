@@ -19,25 +19,41 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-import boto3
-import dropbox
 import errno
 import ftplib
 import json
 import logging
-import nextcloud_client
 import os
-import paramiko
 import requests
 import shutil
 import subprocess
 import tempfile
 import odoo
 from datetime import timedelta
-from nextcloud import NextCloud
 from requests.auth import HTTPBasicAuth
 from werkzeug import urls
 from odoo import api, fields, models, _
+
+# Imports optionnels — le module fonctionne sans si on n'utilise
+# pas ces destinations (evite crash au chargement)
+try:
+    import boto3
+except ImportError:
+    boto3 = None
+try:
+    import dropbox
+except ImportError:
+    dropbox = None
+try:
+    import paramiko
+except ImportError:
+    paramiko = None
+try:
+    import nextcloud_client
+    from nextcloud import NextCloud
+except ImportError:
+    nextcloud_client = None
+    NextCloud = None
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools.misc import find_pg_tool, exec_pg_environ
 from odoo.http import request
@@ -211,6 +227,8 @@ class DbBackupConfigure(models.Model):
     def action_s3cloud(self):
         """If it has aws_secret_access_key, which will perform s3cloud
          operations for connection test"""
+        if not boto3:
+            raise models.ValidationError(_("Le package Python 'boto3' n'est pas installe. Installez-le avec: pip install boto3"))
         if self.aws_access_key and self.aws_secret_access_key:
             try:
                 s3_client = boto3.client(
@@ -252,6 +270,8 @@ class DbBackupConfigure(models.Model):
     def action_nextcloud(self):
         """If it has next_cloud_password, domain, and next_cloud_user_name
          which will perform an action for nextcloud connection test"""
+        if not NextCloud:
+            raise models.ValidationError(_("Le package Python 'nextcloud-api-wrapper' n'est pas installe."))
         if self.domain and self.next_cloud_password and \
                 self.next_cloud_user_name:
             try:
@@ -506,6 +526,8 @@ class DbBackupConfigure(models.Model):
 
     def get_dropbox_auth_url(self):
         """Return dropbox authorization url"""
+        if not dropbox:
+            raise ValidationError(_("Le package Python 'dropbox' n'est pas installe. Installez-le avec: pip install dropbox"))
         dbx_auth = dropbox.oauth.DropboxOAuth2FlowNoRedirect(
             self.dropbox_client_key,
             self.dropbox_client_secret,
@@ -535,6 +557,8 @@ class DbBackupConfigure(models.Model):
     def action_sftp_connection(self):
         """Test the sftp and ftp connection using entered credentials"""
         if self.backup_destination == 'sftp':
+            if not paramiko:
+                raise ValidationError(_("Le package Python 'paramiko' n'est pas installe. Installez-le avec: pip install paramiko"))
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             try:
