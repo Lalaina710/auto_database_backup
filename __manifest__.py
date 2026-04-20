@@ -41,8 +41,10 @@
         'views/db_backup_configure_views.xml',
         'wizard/dropbox_auth_code_views.xml',
     ],
-    'external_dependencies': {
-        'python': ['dropbox', 'pyncclient', 'boto3', 'nextcloud-api-wrapper','paramiko']},
+    # Dependances externes retirees du manifest — rendues optionnelles
+    # via try/except dans le code. Seules les destinations utilisees
+    # necessitent l'installation du package correspondant.
+    'external_dependencies': {},
     'images': ['static/description/banner.gif'],
     'license': 'LGPL-3',
     'installable': True,
